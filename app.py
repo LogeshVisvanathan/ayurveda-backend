@@ -875,3 +875,24 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
+
+from flask import current_app
+
+@app.before_first_request
+def create_tables():
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        with open("migrate_v6.sql", "r") as f:
+            cursor.execute(f.read())
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        print("✅ Tables created successfully")
+
+    except Exception as e:
+        print("❌ Error creating tables:", e)
