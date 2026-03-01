@@ -15,6 +15,9 @@ from functools import wraps
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+from flask_cors import CORS
+
+CORS(app, resources={r"/*": {"origins": "https://ayurveda-frontend-qko9.onrender.com"}}, supports_credentials=True)
 
 
 from flask_cors import CORS
