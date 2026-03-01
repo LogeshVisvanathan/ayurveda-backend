@@ -88,18 +88,10 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
-    # 🔥 VERY IMPORTANT FOR RENDER UUID
-    cur.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
-    conn.commit()
-
-    # 🔥 VERY IMPORTANT FOR RENDER UUID
-    cur.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
-    conn.commit()
-
     # STEP 1 — Create all tables (safe, idempotent)
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users(
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id UUID PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         role VARCHAR(50) NOT NULL,
@@ -107,13 +99,12 @@ def init_db():
         created_at TIMESTAMP DEFAULT NOW()
     );
     CREATE TABLE IF NOT EXISTS registration_documents(
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        id UUID PRIMARY KEY,  DE,
         doc_type VARCHAR(100) NOT NULL, doc_label VARCHAR(255),
         file_url TEXT NOT NULL, uploaded_at TIMESTAMP DEFAULT NOW(), verified BOOLEAN DEFAULT FALSE
     );
     CREATE TABLE IF NOT EXISTS user_profiles(
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id UUID PRIMARY KEY,
         user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
         land_area_acres DECIMAL(10,2), land_survey_no VARCHAR(255),
         land_district VARCHAR(255), land_state VARCHAR(255), farming_type VARCHAR(100),
@@ -123,14 +114,14 @@ def init_db():
         notes TEXT, updated_at TIMESTAMP DEFAULT NOW()
     );
     CREATE TABLE IF NOT EXISTS audit_log(
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id UUID PRIMARY KEY,
         sequence BIGSERIAL, event_type VARCHAR(100) NOT NULL,
         actor_id VARCHAR(255), entity_type VARCHAR(100), entity_id VARCHAR(255),
         payload JSONB, prev_hash VARCHAR(64) NOT NULL,
         block_hash VARCHAR(64) NOT NULL UNIQUE, created_at TIMESTAMP NOT NULL
     );
     CREATE TABLE IF NOT EXISTS herb_batches(
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id UUID PRIMARY KEY,
         batch_id VARCHAR(100) UNIQUE NOT NULL, farmer_id UUID REFERENCES users(id),
         herb_species VARCHAR(255) NOT NULL, quantity_kg DECIMAL(10,2),
         moisture_level DECIMAL(5,2), harvest_date DATE, farming_practices TEXT,
@@ -139,7 +130,7 @@ def init_db():
         created_at TIMESTAMP DEFAULT NOW()
     );
     CREATE TABLE IF NOT EXISTS processing_records(
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id UUID PRIMARY KEY,
         batch_id VARCHAR(100) REFERENCES herb_batches(batch_id),
         processor_id UUID REFERENCES users(id),
         drying_method VARCHAR(100), drying_duration_hours INTEGER,
@@ -149,7 +140,7 @@ def init_db():
         chain_of_custody TEXT, notes TEXT, processed_at TIMESTAMP DEFAULT NOW()
     );
     CREATE TABLE IF NOT EXISTS lab_tests(
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id UUID PRIMARY KEY,
         batch_id VARCHAR(100) REFERENCES herb_batches(batch_id),
         lab_id UUID REFERENCES users(id),
         moisture_content DECIMAL(5,2), moisture_report_url TEXT,
@@ -160,14 +151,14 @@ def init_db():
         tested_by VARCHAR(255), tested_at TIMESTAMP DEFAULT NOW(), notes TEXT
     );
     CREATE TABLE IF NOT EXISTS products(
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id UUID PRIMARY KEY,
         product_id VARCHAR(100) UNIQUE NOT NULL, batch_id VARCHAR(100) REFERENCES herb_batches(batch_id),
         qr_code_data TEXT, product_name VARCHAR(255), description TEXT,
         manufacturing_date DATE, expiry_date DATE, is_public BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT NOW()
     );
     CREATE TABLE IF NOT EXISTS consumer_scans(
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id UUID PRIMARY KEY,
         product_id VARCHAR(100) REFERENCES products(product_id),
         scanned_at TIMESTAMP DEFAULT NOW(), user_agent TEXT, ip_address VARCHAR(50)
     );
@@ -203,15 +194,42 @@ def init_db():
         conn.rollback(); print(f"Fix note: {e}")
 
     # STEP 4 — Seed default admin if none exists
-    try:
-        cur.execute("SELECT id FROM users WHERE role='admin' LIMIT 1")
-        if not cur.fetchone():
-            pw = bcrypt.hashpw(b'admin123', bcrypt.gensalt()).decode()
-            cur.execute("INSERT INTO users(email,password_hash,role,full_name,approval_status,is_active) VALUES('admin@ayurveda.com',%s,'admin','System Admin','approved',TRUE)", (pw,))
-            conn.commit()
-            print("  Default admin: admin@ayurveda.com / admin123")
-    except Exception as e:
-        conn.rollback(); print(f"Seed note: {e}")
+    # STEP 4 — Seed default admin if none exists
+try:
+    cur.execute("SELECT id FROM users WHERE role='admin' LIMIT 1")
+
+    if not cur.fetchone():
+        pw = bcrypt.hashpw(b'admin123', bcrypt.gensalt()).decode()
+        admin_id = str(uuid.uuid4())
+
+        cur.execute("""
+        INSERT INTO users(
+            id,
+            email,
+            password_hash,
+            role,
+            full_name,
+            approval_status,
+            is_active
+        )
+        VALUES(%s,%s,%s,%s,%s,%s,%s)
+        """,
+        (
+            admin_id,
+            'admin@ayurveda.com',
+            pw,
+            'admin',
+            'System Admin',
+            'approved',
+            True
+        ))
+
+        conn.commit()
+        print("Default admin: admin@ayurveda.com / admin123")
+
+except Exception as e:
+    conn.rollback()
+    print(f"Seed note: {e}")
 
     cur.close(); conn.close()
     print("✓ Database ready.")
