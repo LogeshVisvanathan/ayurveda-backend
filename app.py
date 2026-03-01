@@ -178,6 +178,8 @@ def init_db():
     """)
     conn.commit()
 
+    
+
     # STEP 2 — SAFE migration: add new columns to existing users table
     # ADD COLUMN IF NOT EXISTS is idempotent — runs fine even if column already exists
     migrations = [
@@ -245,6 +247,7 @@ def init_db():
         conn.rollback()
         print(f"Seed note: {e}")
 
+    
 
 # ── Auth decorators ────────────────────────────────────────────────────────────
 def token_required(f):
@@ -873,30 +876,8 @@ def health():
 #     except Exception as e: print(f"DB warning: {e}")
 #     app.run(debug=True,port=5000,host='0.0.0.0')
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 
-
-from flask import current_app
-
-def init_db():
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-
-        with open("migrate_v6.sql", "r") as f:
-            cursor.execute(f.read())
-
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        print("✅ Tables created successfully")
-
-    except Exception as e:
-        print("❌ DB Init Error:", e)
-
-# RUN DB INIT ON STARTUP
-init_db()
 with app.app_context():
     init_db()
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
