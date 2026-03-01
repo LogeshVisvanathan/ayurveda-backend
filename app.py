@@ -879,8 +879,7 @@ if __name__ == "__main__":
 
 from flask import current_app
 
-@app.before_first_request
-def create_tables():
+def init_db():
     try:
         conn = get_db()
         cursor = conn.cursor()
@@ -895,4 +894,7 @@ def create_tables():
         print("✅ Tables created successfully")
 
     except Exception as e:
-        print("❌ Error creating tables:", e)
+        print("❌ DB Init Error:", e)
+
+# RUN DB INIT ON STARTUP
+init_db()
