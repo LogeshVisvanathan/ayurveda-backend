@@ -833,7 +833,9 @@ def search_product():
 
 @app.route('/uploads/<path:fn>')
 def serve_upload(fn): return send_from_directory(app.config['UPLOAD_FOLDER'],fn)
-
+@app.route('/')
+def home():
+    return "Ayurvedic Herbal Traceability Backend is Running!"
 @app.route('/api/health', methods=['GET'])
 def health():
     try: conn=get_db(); conn.close(); db=True
