@@ -830,18 +830,25 @@ def search_product():
 # ══════════════════════════════════════════════════════════════════
 # STATIC + HEALTH
 # ══════════════════════════════════════════════════════════════════
+# STATIC + HEALTH
 
 @app.route('/uploads/<path:fn>')
-def serve_upload(fn): return send_from_directory(app.config['UPLOAD_FOLDER'],fn)
+def serve_upload(fn):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], fn)
+
+
 @app.route('/')
 def home():
     return "Ayurvedic Herbal Traceability Backend is Running!"
+
+
 @app.route('/api/health', methods=['GET'])
 def health():
-    try: conn=get_db(); conn.close(); db=True
-    except: db=False
+    try:
+        conn=get_db(); conn.close(); db=True
+    except:
+        db=False
     return jsonify({'status':'ok' if db else 'db_error','db':'connected' if db else 'disconnected','timestamp':datetime.now().isoformat()})
-
 
 # if __name__=='__main__':
 #     print("="*55)
