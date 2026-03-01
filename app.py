@@ -898,3 +898,5 @@ def init_db():
 
 # RUN DB INIT ON STARTUP
 init_db()
+with app.app_context():
+    init_db()
