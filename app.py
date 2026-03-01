@@ -16,16 +16,9 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
+
 from flask_cors import CORS
 CORS(app)# 🔥 RENDER PRODUCTION DB INIT FIX
-@app.before_first_request
-def initialize_database():
-    try:
-        print("🚀 Running DB Init for Render...")
-        init_db()
-        print("✅ DB Init Success")
-    except Exception as e:
-        print(f"❌ DB Init Failed: {e}")
 
 app.config['SECRET_KEY']    = os.environ.get('SECRET_KEY',    'ayurveda-secret-2026')
 app.config['ADMIN_SECRET']  = os.environ.get('ADMIN_SECRET',  'ayurveda-admin-2026')
@@ -92,7 +85,16 @@ def record_audit(conn, event, actor, etype, eid, payload):
 
 # ── DB Init + Migration ────────────────────────────────────────────────────────
 def init_db():
-    conn = get_db(); cur = conn.cursor()
+    conn = get_db()
+    cur = conn.cursor()
+
+    # 🔥 VERY IMPORTANT FOR RENDER UUID
+    cur.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
+    conn.commit()
+
+    # 🔥 VERY IMPORTANT FOR RENDER UUID
+    cur.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto;")
+    conn.commit()
 
     # STEP 1 — Create all tables (safe, idempotent)
     cur.execute("""
