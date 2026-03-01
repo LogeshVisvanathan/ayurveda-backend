@@ -18,8 +18,14 @@ app = Flask(__name__)
 
 
 from flask_cors import CORS
-CORS(app)# 🔥 RENDER PRODUCTION DB INIT FIX
 
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "https://ayurveda-frontend-qko9.onrender.com"
+        ]
+    }
+})
 app.config['SECRET_KEY']    = os.environ.get('SECRET_KEY',    'ayurveda-secret-2026')
 app.config['ADMIN_SECRET']  = os.environ.get('ADMIN_SECRET',  'ayurveda-admin-2026')
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
@@ -831,6 +837,12 @@ def search_product():
 # STATIC + HEALTH
 # ══════════════════════════════════════════════════════════════════
 # STATIC + HEALTH
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'https://ayurveda-frontend-qko9.onrender.com')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+    return response
 
 @app.route('/uploads/<path:fn>')
 def serve_upload(fn):
