@@ -15,7 +15,8 @@ from functools import wraps
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:5173","http://localhost:3000","http://127.0.0.1:5173"], supports_credentials=True)
+from flask_cors import CORS
+CORS(app)
 app.config['SECRET_KEY']    = os.environ.get('SECRET_KEY',    'ayurveda-secret-2026')
 app.config['ADMIN_SECRET']  = os.environ.get('ADMIN_SECRET',  'ayurveda-admin-2026')
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
@@ -23,13 +24,19 @@ app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 ALLOWED = {'png','jpg','jpeg','gif','pdf'}
 
+# def get_db():
+#     return psycopg2.connect(
+#         dbname=os.environ.get('DB_NAME','ayurveda_db'),
+#         user=os.environ.get('DB_USER','postgres'),
+#         password=os.environ.get('DB_PASSWORD','postgres123'),
+#         host=os.environ.get('DB_HOST','localhost'),
+#         port=os.environ.get('DB_PORT','5432'))
+
+import psycopg2
+import os
+
 def get_db():
-    return psycopg2.connect(
-        dbname=os.environ.get('DB_NAME','ayurveda_db'),
-        user=os.environ.get('DB_USER','postgres'),
-        password=os.environ.get('DB_PASSWORD','postgres123'),
-        host=os.environ.get('DB_HOST','localhost'),
-        port=os.environ.get('DB_PORT','5432'))
+    return psycopg2.connect(os.environ.get("DATABASE_URL"))
 
 def serialize(row):
     return {k:(v.isoformat() if hasattr(v,'isoformat') else v) for k,v in row.items()}
