@@ -88,6 +88,10 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
+    # table creation
+    # migrations
+
+    # STEP 4 ADMIN SEED  ✅ HERE ONLY
     # STEP 1 — Create all tables (safe, idempotent)
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users(
@@ -194,45 +198,43 @@ def init_db():
         conn.rollback(); print(f"Fix note: {e}")
 
     # STEP 4 — Seed default admin if none exists
-    # STEP 4 — Seed default admin if none exists
-try:
-    cur.execute("SELECT id FROM users WHERE role='admin' LIMIT 1")
+       # STEP 4 — Seed default admin if none exists
+    try:
+        cur.execute("SELECT id FROM users WHERE role='admin' LIMIT 1")
+        if not cur.fetchone():
 
-    if not cur.fetchone():
-        pw = bcrypt.hashpw(b'admin123', bcrypt.gensalt()).decode()
-        admin_id = str(uuid.uuid4())
+            pw = bcrypt.hashpw(b'admin123', bcrypt.gensalt()).decode()
 
-        cur.execute("""
-        INSERT INTO users(
-            id,
-            email,
-            password_hash,
-            role,
-            full_name,
-            approval_status,
-            is_active
-        )
-        VALUES(%s,%s,%s,%s,%s,%s,%s)
-        """,
-        (
-            admin_id,
-            'admin@ayurveda.com',
-            pw,
-            'admin',
-            'System Admin',
-            'approved',
-            True
-        ))
+            admin_id = str(uuid.uuid4())
 
-        conn.commit()
-        print("Default admin: admin@ayurveda.com / admin123")
+            cur.execute("""
+                INSERT INTO users(
+                    id,
+                    email,
+                    password_hash,
+                    role,
+                    full_name,
+                    approval_status,
+                    is_active
+                )
+                VALUES(%s,%s,%s,%s,%s,%s,%s)
+            """,
+            (
+                admin_id,
+                'admin@ayurveda.com',
+                pw,
+                'admin',
+                'System Admin',
+                'approved',
+                True
+            ))
 
-except Exception as e:
-    conn.rollback()
-    print(f"Seed note: {e}")
+            conn.commit()
+            print("Default admin created")
 
-    cur.close(); conn.close()
-    print("✓ Database ready.")
+    except Exception as e:
+        conn.rollback()
+        print(f"Seed note: {e}")
 
 
 # ── Auth decorators ────────────────────────────────────────────────────────────
