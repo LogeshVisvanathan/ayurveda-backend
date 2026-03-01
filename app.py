@@ -15,8 +15,18 @@ from functools import wraps
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+
 from flask_cors import CORS
-CORS(app)
+CORS(app)# 🔥 RENDER PRODUCTION DB INIT FIX
+@app.before_first_request
+def initialize_database():
+    try:
+        print("🚀 Running DB Init for Render...")
+        init_db()
+        print("✅ DB Init Success")
+    except Exception as e:
+        print(f"❌ DB Init Failed: {e}")
+
 app.config['SECRET_KEY']    = os.environ.get('SECRET_KEY',    'ayurveda-secret-2026')
 app.config['ADMIN_SECRET']  = os.environ.get('ADMIN_SECRET',  'ayurveda-admin-2026')
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
@@ -36,8 +46,13 @@ import psycopg2
 import os
 
 def get_db():
+    db_url = os.environ.get("DATABASE_URL")
+
+    if not db_url:
+        raise Exception("DATABASE_URL not found in Render Environment!")
+
     return psycopg2.connect(
-        os.environ.get("DATABASE_URL"),
+        db_url,
         sslmode="require"
     )
 
@@ -804,10 +819,13 @@ def health():
     return jsonify({'status':'ok' if db else 'db_error','db':'connected' if db else 'disconnected','timestamp':datetime.now().isoformat()})
 
 
-if __name__=='__main__':
-    print("="*55)
-    print(" Ayurvedic Traceability System — Backend v6")
-    print("="*55)
-    try: init_db()
-    except Exception as e: print(f"DB warning: {e}")
-    app.run(debug=True,port=5000,host='0.0.0.0')
+# if __name__=='__main__':
+#     print("="*55)
+#     print(" Ayurvedic Traceability System — Backend v6")
+#     print("="*55)
+#     try: init_db()
+#     except Exception as e: print(f"DB warning: {e}")
+#     app.run(debug=True,port=5000,host='0.0.0.0')
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
