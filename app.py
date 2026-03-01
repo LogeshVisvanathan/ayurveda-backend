@@ -111,11 +111,6 @@ def init_db():
         full_name VARCHAR(255), phone VARCHAR(20), address TEXT,
         created_at TIMESTAMP DEFAULT NOW()
     );
-    # CREATE TABLE IF NOT EXISTS registration_documents(
-    #     id UUID PRIMARY KEY,  DE,
-    #     doc_type VARCHAR(100) NOT NULL, doc_label VARCHAR(255),
-    #     file_url TEXT NOT NULL, uploaded_at TIMESTAMP DEFAULT NOW(), verified BOOLEAN DEFAULT FALSE
-    # );
     CREATE TABLE IF NOT EXISTS registration_documents(
     id UUID PRIMARY KEY,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
