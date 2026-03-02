@@ -780,7 +780,12 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', 'https://ayurveda-frontend-qko9.onrender.com')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
     return response
+
+@app.route('/api/<path:path>', methods=['OPTIONS'])
+def options_handler(path):
+    return '', 200
 
 @app.route('/uploads/<path:fn>')
 def serve_upload(fn):
