@@ -800,54 +800,20 @@ def health():
         db=False
     return jsonify({'status':'ok' if db else 'db_error','db':'connected' if db else 'disconnected','timestamp':datetime.now().isoformat()})
 
-# if __name__=='__main__':
-#     print("="*55)
-#     print(" Ayurvedic Traceability System — Backend v6")
-#     print("="*55)
-#     try: init_db()
-#     except Exception as e: print(f"DB warning: {e}")
-#     app.run(debug=True,port=5000,host='0.0.0.0')
-
-
-
-
-
-with app.app_context():
+@app.route('/api/init-db')
+def initialize_database():
     try:
-        print("Running DB Migration Safely...")
-        conn = get_db()
-        cur = conn.cursor()
-
-        cur.execute("""
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) DEFAULT 'pending';
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_by UUID;
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP;
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS rejection_note TEXT;
-        ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT FALSE;
-        """)
-
-        cur.execute("""
-        UPDATE users
-        SET approval_status = 'approved',
-            is_active = TRUE
-        WHERE role = 'admin';
-        """)
-
-        cur.execute("""
-        UPDATE users
-        SET approval_status = 'approved',
-            is_active = TRUE
-        WHERE role != 'admin'
-          AND (approval_status IS NULL OR approval_status = 'pending');
-        """)
-
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        print("Migration Completed Successfully!")
-
+        init_db()
+        return {"message": "Database initialized successfully"}
     except Exception as e:
-        print("Migration skipped:", e)
+        return {"error": str(e)}, 500
+    
+
+
+
+
+
+
+
 
     
