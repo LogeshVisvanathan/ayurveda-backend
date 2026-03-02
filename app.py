@@ -279,6 +279,20 @@ def role_required(*roles):
 # AUTH
 # ══════════════════════════════════════════════════════════════════
 
+# ================= DB MANUAL INIT =================
+@app.route("/api/init-db")
+def initialize_database():
+    try:
+        init_db()
+        return {"message": "Database initialized successfully"}
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+
+# ================= AUTH =================
+@app.route('/api/auth/admin-register', methods=['POST'])
+def admin_register():
+
 @app.route('/api/auth/admin-register', methods=['POST'])
 def admin_register():
     """Admin-only register. Needs secret key. No docs, no approval wait."""
@@ -881,7 +895,6 @@ def health():
 #     app.run(debug=True,port=5000,host='0.0.0.0')
 
 
-with app.app_context():
-    init_db()
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
