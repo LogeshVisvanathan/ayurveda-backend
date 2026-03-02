@@ -290,8 +290,6 @@ def initialize_database():
 
 
 # ================= AUTH =================
-@app.route('/api/auth/admin-register', methods=['POST'])
-def admin_register():
 
 @app.route('/api/auth/admin-register', methods=['POST'])
 def admin_register():
