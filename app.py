@@ -26,6 +26,15 @@ app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 ALLOWED = {'png','jpg','jpeg','gif','pdf'}
 
+# fallback CORS headers in case flask-cors doesn't fire (e.g. on render preflight)
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = 'https://ayurveda-frontend-qko9.onrender.com'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
+    return response
+
 # def get_db():
 #     return psycopg2.connect(
 #         dbname=os.environ.get('DB_NAME','ayurveda_db'),
