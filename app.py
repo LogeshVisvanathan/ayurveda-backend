@@ -203,13 +203,6 @@ def role_required(*roles):
 # ══════════════════════════════════════════════════════════════════
 
 # ================= DB MANUAL INIT =================
-@app.route("/api/init-db")
-def initialize_database():
-    try:
-        init_db()
-        return {"message": "Database initialized successfully"}
-    except Exception as e:
-        return {"error": str(e)}, 500
 
 
 # ================= AUTH =================
@@ -817,5 +810,44 @@ def health():
 
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
+
+with app.app_context():
+    try:
+        print("Running DB Migration Safely...")
+        conn = get_db()
+        cur = conn.cursor()
+
+        cur.execute("""
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) DEFAULT 'pending';
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_by UUID;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS rejection_note TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT FALSE;
+        """)
+
+        cur.execute("""
+        UPDATE users
+        SET approval_status = 'approved',
+            is_active = TRUE
+        WHERE role = 'admin';
+        """)
+
+        cur.execute("""
+        UPDATE users
+        SET approval_status = 'approved',
+            is_active = TRUE
+        WHERE role != 'admin'
+          AND (approval_status IS NULL OR approval_status = 'pending');
+        """)
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        print("Migration Completed Successfully!")
+
+    except Exception as e:
+        print("Migration skipped:", e)
+
+    
