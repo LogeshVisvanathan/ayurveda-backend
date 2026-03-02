@@ -255,36 +255,105 @@ def register():
         if not data.get('govt_id_type') or not data.get('govt_id_number'): return jsonify({'error':'Govt ID type and number are required'}),400
 
     pw = bcrypt.hashpw(data['password'].encode(),bcrypt.gensalt()).decode()
+
     try:
-        conn = get_db(); cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute("INSERT INTO users(email,password_hash,role,full_name,phone,address,approval_status,is_active) VALUES(%s,%s,%s,%s,%s,%s,'pending',FALSE) RETURNING id,email,role,full_name",
-                    (data['email'],pw,role,data['full_name'],data.get('phone'),data.get('address')))
-        user = dict(cur.fetchone()); uid = user['id']
+        conn = get_db()
+        cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-        # Profile
+        # ================= USER =================
+        cur.execute("""
+            INSERT INTO users(
+                email,password_hash,role,
+                full_name,phone,address,
+                approval_status,is_active
+            )
+            VALUES(%s,%s,%s,%s,%s,%s,'pending',FALSE)
+            RETURNING id,email,role,full_name
+        """,(
+            data['email'],
+            pw,
+            role,
+            data['full_name'],
+            data.get('phone'),
+            data.get('address')
+        ))
+
+        user = dict(cur.fetchone())
+        uid  = user['id']
+
+        # 🔥 COMMIT USER FIRST (IMPORTANT)
+        conn.commit()
+
+        # ================= PROFILE =================
         try:
-            cur.execute("INSERT INTO user_profiles(user_id,land_area_acres,land_survey_no,land_district,land_state,farming_type,lab_name,lab_licence_no,lab_accreditation,lab_address,govt_id_type,govt_id_number,notes) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                        (uid,data.get('land_area_acres') or None,data.get('land_survey_no'),data.get('land_district'),data.get('land_state'),data.get('farming_type'),data.get('lab_name'),data.get('lab_licence_no'),data.get('lab_accreditation'),data.get('lab_address'),data.get('govt_id_type'),data.get('govt_id_number'),data.get('notes')))
-        except Exception: pass
+            cur.execute("""
+                INSERT INTO user_profiles(
+                    user_id,
+                    land_area_acres,
+                    land_survey_no,
+                    land_district,
+                    land_state,
+                    farming_type,
+                    lab_name,
+                    lab_licence_no,
+                    lab_accreditation,
+                    lab_address,
+                    govt_id_type,
+                    govt_id_number,
+                    notes
+                )
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            """,(
+                uid,
+                data.get('land_area_acres') or None,
+                data.get('land_survey_no'),
+                data.get('land_district'),
+                data.get('land_state'),
+                data.get('farming_type'),
+                data.get('lab_name'),
+                data.get('lab_licence_no'),
+                data.get('lab_accreditation'),
+                data.get('lab_address'),
+                data.get('govt_id_type'),
+                data.get('govt_id_number'),
+                data.get('notes')
+            ))
+        except Exception as e:
+            print("Profile skipped:", e)
 
-        # Documents
-        for fname,(label,pfx) in [('land_document',('Land Ownership Doc','land_')),('lab_licence',('Lab Licence','lab_')),('govt_id',('Govt ID','govtid_')),('extra_document',('Extra Doc','extra_'))]:
+        # ================= DOCUMENTS =================
+        for fname,(label,pfx) in [
+            ('land_document',('Land Ownership Doc','land_')),
+            ('lab_licence',('Lab Licence','lab_')),
+            ('govt_id',('Govt ID','govtid_')),
+            ('extra_document',('Extra Doc','extra_'))
+        ]:
             url = save_file(request.files.get(fname),pfx)
             if url:
-                try: cur.execute("INSERT INTO registration_documents(user_id,doc_type,doc_label,file_url) VALUES(%s,%s,%s,%s)",(uid,fname,label,url))
-                except Exception: pass
+                try:
+                    cur.execute("""
+                        INSERT INTO registration_documents
+                        (user_id,doc_type,doc_label,file_url)
+                        VALUES(%s,%s,%s,%s)
+                    """,(uid,fname,label,url))
+                except Exception as e:
+                    print("Doc skipped:", e)
 
-        try: record_audit(conn,'USER_REGISTERED',str(uid),'user',str(uid),{'email':data['email'],'role':role,'name':data['full_name']})
-        except Exception: pass
+        conn.commit()
+        cur.close()
+        conn.close()
 
-        conn.commit(); cur.close(); conn.close()
         return jsonify({
-            'message': f'Registration submitted! Your application is pending admin review. Track your status using your email: {data["email"]}',
-            'status': 'pending',
-            'application_email': data['email']
-        }), 201
-    except psycopg2.IntegrityError: return jsonify({'error':'Email already registered'}),409
-    except Exception as e: return jsonify({'error':str(e)}),500
+            'message':'Registration submitted!',
+            'status':'pending',
+            'application_email':data['email']
+        }),201
+
+    except psycopg2.IntegrityError:
+        return jsonify({'error':'Email already registered'}),409
+
+    except Exception as e:
+        return jsonify({'error':str(e)}),500
 
 
 @app.route('/api/auth/application-status', methods=['GET'])
