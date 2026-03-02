@@ -15,20 +15,10 @@ from functools import wraps
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-from flask_cors import CORS
 
-CORS(app, resources={r"/*": {"origins": "https://ayurveda-frontend-qko9.onrender.com"}}, supports_credentials=True)
+# enable CORS for frontend origin on all endpoints and handle preflight automatically
+CORS(app, origins="https://ayurveda-frontend-qko9.onrender.com", supports_credentials=True)
 
-
-from flask_cors import CORS
-
-CORS(app, resources={
-    r"/api/*": {
-        "origins": [
-            "https://ayurveda-frontend-qko9.onrender.com"
-        ]
-    }
-})
 app.config['SECRET_KEY']    = os.environ.get('SECRET_KEY',    'ayurveda-secret-2026')
 app.config['ADMIN_SECRET']  = os.environ.get('ADMIN_SECRET',  'ayurveda-admin-2026')
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
@@ -827,17 +817,6 @@ def search_product():
 # STATIC + HEALTH
 # ══════════════════════════════════════════════════════════════════
 # STATIC + HEALTH
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', 'https://ayurveda-frontend-qko9.onrender.com')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
-    response.headers['Access-Control-Allow-Credentials'] = 'true'
-    return response
-
-@app.route('/api/<path:path>', methods=['OPTIONS'])
-def options_handler(path):
-    return '', 200
 
 @app.route('/uploads/<path:fn>')
 def serve_upload(fn):
