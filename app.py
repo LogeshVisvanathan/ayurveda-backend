@@ -367,7 +367,7 @@ def application_status():
     try:
         conn = get_db(); cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         # COALESCE handles old DB where columns might be NULL
-        # Use TRIM on DB email to be robust against accidental spaces stored in DB
+        # Primary: exact match on normalized email
         cur.execute("""
             SELECT u.id, u.email, u.role, u.full_name, u.phone, u.created_at,
                    COALESCE(u.approval_status,'pending') AS approval_status,
@@ -380,7 +380,27 @@ def application_status():
             WHERE LOWER(TRIM(u.email))=%s AND u.role!='admin'
         """, (email,))
         user = cur.fetchone()
-        if not user: cur.close(); conn.close(); return jsonify({'error':'No registration found for this email'}),404
+
+        # Fallback: fuzzy match in case email was stored with unexpected characters
+        if not user:
+            cur.execute("""
+                SELECT u.id, u.email, u.role, u.full_name, u.phone, u.created_at,
+                       COALESCE(u.approval_status,'pending') AS approval_status,
+                       u.approved_at, u.rejection_note,
+                       COALESCE(u.is_active,FALSE) AS is_active,
+                       up.land_district, up.land_state, up.farming_type,
+                       up.lab_name, up.lab_licence_no, up.govt_id_type
+                FROM users u
+                LEFT JOIN user_profiles up ON u.id=up.user_id
+                WHERE u.role!='admin'
+                  AND LOWER(TRIM(u.email)) LIKE %s
+                ORDER BY u.created_at DESC
+                LIMIT 1
+            """, (f"%{email}%",))
+            user = cur.fetchone()
+
+        if not user:
+            cur.close(); conn.close(); return jsonify({'error':'No registration found for this email'}),404
         user = dict(user); uid = user['id']
 
         try:
