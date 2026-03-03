@@ -381,7 +381,7 @@ def application_status():
         """, (email,))
         user = cur.fetchone()
 
-        # Fallback: fuzzy match in case email was stored with unexpected characters
+        # Fallback 1: fuzzy match on email local-part in users table
         if not user:
             local_part = email.split('@')[0] if '@' in email else email
             cur.execute("""
@@ -398,6 +398,26 @@ def application_status():
                 ORDER BY u.created_at DESC
                 LIMIT 1
             """, (f"%{local_part}%",))
+            user = cur.fetchone()
+
+        # Fallback 2: look up via audit_log payload email in case users.email was normalized differently
+        if not user:
+            cur.execute("""
+                SELECT u.id, u.email, u.role, u.full_name, u.phone, u.created_at,
+                       COALESCE(u.approval_status,'pending') AS approval_status,
+                       u.approved_at, u.rejection_note,
+                       COALESCE(u.is_active,FALSE) AS is_active,
+                       up.land_district, up.land_state, up.farming_type,
+                       up.lab_name, up.lab_licence_no, up.govt_id_type
+                FROM audit_log al
+                JOIN users u ON al.entity_type='user' AND al.entity_id = u.id::text
+                LEFT JOIN user_profiles up ON u.id = up.user_id
+                WHERE al.event_type = 'USER_REGISTERED'
+                  AND LOWER(al.payload->>'email') = %s
+                  AND u.role != 'admin'
+                ORDER BY al.created_at DESC
+                LIMIT 1
+            """, (email,))
             user = cur.fetchone()
 
         if not user:
