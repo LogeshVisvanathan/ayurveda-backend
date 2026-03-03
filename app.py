@@ -383,6 +383,7 @@ def application_status():
 
         # Fallback: fuzzy match in case email was stored with unexpected characters
         if not user:
+            local_part = email.split('@')[0] if '@' in email else email
             cur.execute("""
                 SELECT u.id, u.email, u.role, u.full_name, u.phone, u.created_at,
                        COALESCE(u.approval_status,'pending') AS approval_status,
@@ -396,7 +397,7 @@ def application_status():
                   AND LOWER(TRIM(u.email)) LIKE %s
                 ORDER BY u.created_at DESC
                 LIMIT 1
-            """, (f"%{email}%",))
+            """, (f"%{local_part}%",))
             user = cur.fetchone()
 
         if not user:
