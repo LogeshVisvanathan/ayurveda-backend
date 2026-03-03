@@ -315,7 +315,7 @@ def register():
             data.get('notes')
         ))
 
-        # DOCUMENTS
+        # DOCUMENTS (explicit id to avoid NULL id on older DBs without DEFAULT)
         for fname,(label,pfx) in [
             ('land_document',('Land Ownership Doc','land_')),
             ('lab_licence',('Lab Licence','lab_')),
@@ -324,12 +324,13 @@ def register():
         ]:
             url = save_file(request.files.get(fname),pfx)
             if url:
+                doc_id = str(uuid.uuid4())
                 cur.execute("""
                 INSERT INTO registration_documents(
-                user_id,doc_type,doc_label,file_url
+                id,user_id,doc_type,doc_label,file_url
                 )
-                VALUES(%s,%s,%s,%s)
-                """,(uid,fname,label,url))
+                VALUES(%s,%s,%s,%s,%s)
+                """,(doc_id,uid,fname,label,url))
 
         record_audit(conn,'USER_REGISTERED',
                      str(uid),'user',str(uid),
