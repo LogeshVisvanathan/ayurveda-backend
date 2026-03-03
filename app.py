@@ -288,16 +288,18 @@ def register():
             data.get('address')
         ))
 
-        # PROFILE
+        # PROFILE (explicit id to avoid NULL id on older DBs without DEFAULT)
+        profile_id = str(uuid.uuid4())
         cur.execute("""
         INSERT INTO user_profiles(
-            user_id,land_area_acres,land_survey_no,
+            id,user_id,land_area_acres,land_survey_no,
             land_district,land_state,farming_type,
             lab_name,lab_licence_no,lab_accreditation,
             lab_address,govt_id_type,govt_id_number,notes
         )
-        VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """,(
+            profile_id,
             uid,
             data.get('land_area_acres'),
             data.get('land_survey_no'),
