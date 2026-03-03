@@ -218,8 +218,9 @@ def admin_register():
     pw = bcrypt.hashpw(data['password'].encode(),bcrypt.gensalt()).decode()
     try:
         conn = get_db(); cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute("INSERT INTO users(email,password_hash,role,full_name,phone,approval_status,is_active) VALUES(%s,%s,'admin',%s,%s,'approved',TRUE) RETURNING id,email,role,full_name",
-                    (data['email'],pw,data['full_name'],data.get('phone')))
+        admin_id = str(uuid.uuid4())
+        cur.execute("INSERT INTO users(id,email,password_hash,role,full_name,phone,approval_status,is_active) VALUES(%s,%s,%s,'admin',%s,%s,'approved',TRUE) RETURNING id,email,role,full_name",
+                    (admin_id,data['email'],pw,data['full_name'],data.get('phone')))
         user = dict(cur.fetchone())
         record_audit(conn,'ADMIN_REGISTERED',str(user['id']),'user',str(user['id']),{'email':data['email'],'name':data['full_name']})
         conn.commit(); cur.close(); conn.close()
@@ -259,21 +260,26 @@ def register():
         conn = get_db()
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
+        # early duplicate check so we can avoid a DB error and return consistent message
+        cur.execute("SELECT 1 FROM users WHERE LOWER(email)=LOWER(%s)", (data['email'],))
+        if cur.fetchone():
+            cur.close(); conn.close()
+            return jsonify({'error':'Email already registered'}),409
+
+        uid = str(uuid.uuid4())
         cur.execute("""
         INSERT INTO users(
-            email,password_hash,role,full_name,phone,address,
+            id,email,password_hash,role,full_name,phone,address,
             approval_status,is_active
         )
-        VALUES(%s,%s,%s,%s,%s,%s,'pending',FALSE)
-        RETURNING id
+        VALUES(%s,%s,%s,%s,%s,%s,%s,'pending',FALSE)
         """,(
+            uid,
             data['email'],pw,role,
             data['full_name'],
             data.get('phone'),
             data.get('address')
         ))
-
-        uid = cur.fetchone()['id']
 
         # PROFILE
         cur.execute("""
