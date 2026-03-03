@@ -226,8 +226,15 @@ def admin_register():
         conn.commit(); cur.close(); conn.close()
         token = jwt.encode({'user_id':str(user['id']),'email':user['email'],'role':'admin','exp':datetime.utcnow()+timedelta(days=7)},app.config['SECRET_KEY'],algorithm='HS256')
         return jsonify({'message':f'Admin account created. Welcome, {data["full_name"]}!','token':token,'user':user}),201
-    except psycopg2.IntegrityError: return jsonify({'error':'Email already registered'}),409
-    except Exception as e: return jsonify({'error':str(e)}),500
+    except psycopg2.IntegrityError as e:
+        msg = str(e)
+        # Only treat UNIQUE email violation as "already registered"
+        if 'users_email_key' in msg or 'unique constraint' in msg.lower():
+            return jsonify({'error':'Email already registered'}),409
+        # For any other integrity error, surface a generic DB error
+        return jsonify({'error':'Database constraint error','details':msg}),400
+    except Exception as e:
+        return jsonify({'error':str(e)}),500
 
 
 @app.route('/api/auth/register', methods=['POST'])
@@ -337,8 +344,11 @@ def register():
             'application_email':data['email']
         }),201
 
-    except psycopg2.IntegrityError:
-        return jsonify({'error':'Email already registered'}),409
+    except psycopg2.IntegrityError as e:
+        msg = str(e)
+        if 'users_email_key' in msg or 'unique constraint' in msg.lower():
+            return jsonify({'error':'Email already registered'}),409
+        return jsonify({'error':'Database constraint error','details':msg}),400
 
     except Exception as e:
         return jsonify({'error':str(e)}),500
