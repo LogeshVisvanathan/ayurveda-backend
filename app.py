@@ -243,6 +243,8 @@ def register():
     data = request.form
     for field in ('email','password','role','full_name'):
         if not data.get(field): return jsonify({'error':f'"{field}" is required'}),400
+    # Normalize email/role for consistent lookups
+    email = (data.get('email') or '').strip().lower()
     role = data['role']
     if role == 'admin':
         return jsonify({'error':'Admin accounts use the /admin-register page with a secret key'}),400
@@ -268,7 +270,7 @@ def register():
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # early duplicate check so we can avoid a DB error and return consistent message
-        cur.execute("SELECT 1 FROM users WHERE LOWER(email)=LOWER(%s)", (data['email'],))
+        cur.execute("SELECT 1 FROM users WHERE LOWER(email)=LOWER(%s)", (email,))
         if cur.fetchone():
             cur.close(); conn.close()
             return jsonify({'error':'Email already registered'}),409
@@ -282,7 +284,7 @@ def register():
         VALUES(%s,%s,%s,%s,%s,%s,%s,'pending',FALSE)
         """,(
             uid,
-            data['email'],pw,role,
+            email,pw,role,
             data['full_name'],
             data.get('phone'),
             data.get('address')
@@ -334,7 +336,7 @@ def register():
 
         record_audit(conn,'USER_REGISTERED',
                      str(uid),'user',str(uid),
-                     {'email':data['email'],'role':role})
+                     {'email':email,'role':role})
 
         # 🔥 COMMIT ONLY ONCE AT THE END
         conn.commit()
