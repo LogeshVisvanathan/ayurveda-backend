@@ -365,6 +365,7 @@ def application_status():
     try:
         conn = get_db(); cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         # COALESCE handles old DB where columns might be NULL
+        # Use TRIM on DB email to be robust against accidental spaces stored in DB
         cur.execute("""
             SELECT u.id, u.email, u.role, u.full_name, u.phone, u.created_at,
                    COALESCE(u.approval_status,'pending') AS approval_status,
@@ -374,7 +375,7 @@ def application_status():
                    up.lab_name, up.lab_licence_no, up.govt_id_type
             FROM users u
             LEFT JOIN user_profiles up ON u.id=up.user_id
-            WHERE LOWER(u.email)=%s AND u.role!='admin'
+            WHERE LOWER(TRIM(u.email))=%s AND u.role!='admin'
         """, (email,))
         user = cur.fetchone()
         if not user: cur.close(); conn.close(); return jsonify({'error':'No registration found for this email'}),404
